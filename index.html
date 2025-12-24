@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="description" content="أداة لتحميل الفيديوهات، الصوت، والصور من YouTube وTikTok وInstagram — واجهة حديثة ومتكاملة (يتطلب خادم backend)"/>
+    <title>YT / TikTok / Instagram Downloader — YT Thumbnail + Media</title>
+
+    <!-- Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        :root{
+            --bg-1: #0f1724;
+            --bg-2: #0b1220;
+            --card: rgba(255,255,255,0.04);
+            --glass-border: rgba(255,255,255,0.06);
+            --primary: #ff3b30;
+            --accent: #f59e0b;
+            --muted: rgba(255,255,255,0.6);
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        *{box-sizing:border-box;margin:0;padding:0}
+        body{
+            font-family: 'Cairo', sans-serif;
+            background: linear-gradient(135deg,var(--bg-1) 0%, var(--bg-2) 100%);
+            color:#fff;
+            min-height:100vh;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+        }
+
+        .container{max-width:1100px;margin:0 auto;padding:28px}
+
+        header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+        .brand{display:flex;align-items:center;gap:12px}
+        .brand .logo{width:56px;height:56px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--primary),#cc0000);box-shadow:0 8px 32px rgba(255,0,0,0.12)}
+        .brand h1{font-size:1.2rem;font-weight:800}
+        .subtitle{font-size:12px;color:var(--muted)}
+
+        .glass{
+            background: var(--card);
+            border-radius:14px;
+            border:1px solid var(--glass-border);
+            padding:18px;
+            backdrop-filter: blur(8px);
+        }
+
+        /* Main controls */
+        .main-card{display:grid;grid-template-columns: 1fr 380px; gap:18px;align-items:start}
+        @media (max-width:980px){ .main-card{grid-template-columns:1fr} }
+
+        .input-area{display:flex;flex-direction:column;gap:12px}
+        .service-tabs{display:flex;gap:8px;flex-wrap:wrap}
+        .tab{padding:8px 14px;border-radius:10px;background:rgba(255,255,255,0.03);cursor:pointer;font-weight:700;color:var(--muted);display:flex;gap:8px;align-items:center}
+        .tab.active{background:linear-gradient(90deg,var(--primary),#cc0000);color:#fff;box-shadow:0 8px 24px rgba(255,0,0,0.12)}
+        .input-wrapper{position:relative}
+        .input-wrapper input{width:100%;height:56px;padding:12px 48px 12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);background:transparent;color:inherit;font-size:15px}
+        .input-wrapper .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:18px}
+
+        .actions{display:flex;gap:10px;flex-wrap:wrap}
+        .btn{padding:10px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:800;display:inline-flex;align-items:center;gap:8px}
+        .btn-primary{background:linear-gradient(90deg,var(--primary),#cc0000);color:#fff;box-shadow:0 8px 18px rgba(255,0,0,0.12)}
+        .btn-ghost{background:rgba(255,255,255,0.03);color:var(--muted)}
+        .muted{color:var(--muted);font-size:13px}
+
+        /* right column (preview + options) */
+        .preview-card img{width:100%;border-radius:10px;object-fit:cover}
+        .meta{display:flex;gap:12px;align-items:center;margin-top:10px}
+        .meta .title{font-weight:800}
+        .meta .small{color:var(--muted);font-size:13px}
+
+        /* formats list */
+        .formats{display:flex;flex-direction:column;gap:8px;margin-top:12px;max-height:360px;overflow:auto;padding-right:6px}
+        .format{display:flex;align-items:center;justify-content:space-between;padding:10px;border-radius:10px;background:rgba(0,0,0,0.12);border:1px solid rgba(255,255,255,0.03)}
+        .format .left{display:flex;align-items:center;gap:12px}
+        .badge{padding:6px 10px;border-radius:8px;font-weight:800;font-size:12px}
+
+        /* thumbnails grid (below) */
+        #thumbnailsGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+        @media (max-width:980px){ #thumbnailsGrid{grid-template-columns:repeat(2,1fr)} }
+        @media (max-width:560px){ #thumbnailsGrid{grid-template-columns:1fr} }
+
+        .thumbnail-card{border-radius:12px;overflow:hidden}
+        .thumbnail-card img{width:100%;height:160px;object-fit:cover;display:block}
+
+        /* results area */
+        #resultsSection{margin-top:18px}
+        .row{display:flex;gap:12px;flex-wrap:wrap}
+
+        /* toast */
+        .toast-container{position:fixed;top:16px;left:16px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+        .toast{background:rgba(0,0,0,0.6);padding:10px 12px;border-radius:10px;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,0.5)}
+
+        /* footer */
+        footer{margin-top:24px;text-align:center;color:var(--muted);font-size:13px;padding:18px 0}
+
+        /* small helpers */
+        .spinner{width:18px;height:18px;border:3px solid rgba(255,255,255,0.08);border-top-color:var(--primary);border-radius:50%;animation:spin 0.9s linear infinite}
+        @keyframes spin{to{transform:rotate(360deg)}}
+
+        /* modal */
+        .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;padding:20px;z-index:10000}
+        .modal-overlay.show{display:flex}
+        .modal-content{max-width:920px;width:100%;max-height:90vh;background:#000;border-radius:12px;padding:12px;overflow:auto}
+        .modal-content img{width:100%;height:auto;display:block;border-radius:8px}
+
+        /* small responsive tweaks */
+        .service-select{display:flex;gap:8px;align-items:center}
+        .service-select select{background:transparent;color:inherit;border:1px solid rgba(255,255,255,0.06);padding:8px;border-radius:10px}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand">
+                <div class="logo"><i class="fab fa-youtube" style="font-size:20px;color:#fff"></i></div>
+                <div>
+                    <h1>YT / TikTok / Instagram Downloader</h1>
+                    <div class="subtitle">تحميل الفيديو، الصوت، والصور — يتطلب تشغيل خادم backend (مثال سيرفر Node/yt-dlp مرفق)</div>
+                </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px">
+                <div class="glass" style="padding:8px 12px;display:flex;gap:10px;align-items:center">
+                    <i class="fas fa-download" style="color:var(--primary)"></i>
+                    <div style="text-align:right">
+                        <div style="font-weight:800" id="downloadCount">0</div>
+                        <div class="muted" style="font-size:12px">عمليات التنزيل</div>
+                    </div>
+                </div>
+
+                <button class="btn btn-ghost" id="themeToggle" title="تبديل الوضع">
+                    <i class="fas fa-sun"></i>
+                </button>
+            </div>
+        </header>
+
+        <main>
+            <div class="main-card">
+                <!-- left: input + controls -->
+                <div class="glass input-area">
+                    <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                            <div style="display:flex;flex-direction:column">
+                                <div style="font-weight:900">أدخل رابط الفيديو أو المنشور</div>
+                                <div class="muted" style="margin-top:4px;font-size:13px">يدعم: YouTube, TikTok, Instagram</div>
+                            </div>
+
+                            <div class="service-select">
+                                <select id="serviceSelect" title="اختيار الخدمة">
+                                    <option value="auto">تلقائي (تحليل من الرابط)</option>
+                                    <option value="youtube">YouTube</option>
+                                    <option value="tiktok">TikTok</option>
+                                    <option value="instagram">Instagram</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="service-tabs" id="serviceTabs">
+                            <div class="tab active" data-service="youtube"><i class="fab fa-youtube"></i> يوتيوب</div>
+                            <div class="tab" data-service="tiktok"><i class="fab fa-tiktok"></i> تيك توك</div>
+                            <div class="tab" data-service="instagram"><i class="fab fa-instagram"></i> انستغرام</div>
+                        </div>
+                    </div>
+
+                    <div class="input-wrapper" style="margin-top:8px">
+                        <span class="icon"><i class="fas fa-link"></i></span>
+                        <input id="urlInput" placeholder="https://..." dir="ltr" autocomplete="off" spellcheck="false" />
+                    </div>
+
+                    <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
+                        <button class="btn btn-primary" id="analyzeBtn"><i class="fas fa-search"></i> تحليل واستخراج</button>
+                        <button class="btn btn-ghost" id="pasteBtn"><i class="fas fa-paste"></i> لصق</button>
+                        <button class="btn btn-ghost" id="clearBtn"><i class="fas fa-times"></i> مسح</button>
+                        <div style="margin-left:auto" class="muted">اختصارات: Enter = استخراج • Ctrl+V = لصق</div>
+                    </div>
+
+                    <div id="loadingSection" style="display:none;margin-top:12px">
+                        <div style="display:flex;gap:10px;align-items:center">
+                            <div class="spinner"></div>
+                            <div>
+                                <div id="loadingText" class="muted">جاري التحليل...</div>
+                                <div style="font-size:12px;color:var(--muted);margin-top:6px">ملاحظة: تنزيل الفيديوهات يتطلب خادماً (انظر السيرفر المقترح)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="errorSection" style="display:none;margin-top:12px;padding:10px;background:rgba(239,68,68,0.08);border-radius:8px;color:var(--danger)"></div>
+
+                    <!-- quick results: thumbnails -->
+                    <div id="thumbnailsGrid" style="margin-top:14px"></div>
+                </div>
+
+                <!-- right: preview + formats -->
+                <aside class="glass preview-card" style="min-height:220px">
+                    <div id="previewPlaceholder" style="display:flex;flex-direction:column;gap:8px">
+                        <div style="height:200px;border-radius:10px;background:linear-gradient(90deg,rgba(255,255,255,0.02),rgba(255,255,255,0.015));display:flex;align-items:center;justify-content:center">
+                            <i class="fas fa-photo-video" style="font-size:38px;color:var(--muted)"></i>
+                        </div>
+                        <div>
+                            <div class="title" id="mediaTitle">لا شيء حتى الآن</div>
+                            <div class="small muted" id="mediaMeta">أدخل رابط ثم اضغط "تحليل واستخراج"</div>
+                        </div>
+                    </div>
+
+                    <div id="formatsList" style="margin-top:12px;display:none">
+                        <div style="display:flex;justify-content:space-between;align-items:center">
+                            <div style="font-weight:800">النسخ المتاحة</div>
+                            <div class="muted" style="font-size:13px">اختر جودة ثم تنزيل</div>
+                        </div>
+
+                        <div class="formats" id="formats"></div>
+
+                        <div style="display:flex;gap:8px;margin-top:12px">
+                            <button class="btn btn-primary" id="downloadSelectedBtn"><i class="fas fa-download"></i> تنزيل الاختيار</button>
+                            <button class="btn btn-ghost" id="copyAllBtn"><i class="fas fa-copy"></i> نسخ جميع الروابط</button>
+                            <button class="btn btn-ghost" id="downloadAllBtn"><i class="fas fa-download"></i> تنزيل الكل (JPG للصور)</button>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+
+            <!-- results / details -->
+            <section id="resultsSection" style="display:none">
+                <div class="glass" style="margin-top:18px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                        <div style="font-weight:800">نتائج الاستخراج</div>
+                        <div class="muted">يمكنك المعاينة أو تنزيل الملفات</div>
+                    </div>
+
+                    <div id="detailedFormats" style="margin-top:12px"></div>
+
+                    <div id="extraInfo" style="margin-top:14px"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            صنع بـ <span style="color:var(--primary)">❤</span> بواسطة YT Downloader — مثال متكامل frontend + backend (Node/yt-dlp)
+        </footer>
+    </div>
+
+    <!-- Modal preview -->
+    <div class="modal-overlay" id="mediaModal">
+        <div class="modal-content">
+            <button class="btn btn-ghost" onclick="closeModal()" style="float:left;margin-bottom:8px"><i class="fas fa-times"></i></button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        // ================================================
+        // ملاحظات مهمة:
+        // - تنزيل الفيديو/الصوت مباشرة من المتصفح من مصادر مثل YouTube/TikTok/Instagram غالباً ما يتطلب خادم (proxy) للتعامل مع CORS وحقوق الوصول.
+        // - الكود التالي يقدم واجهة حديثة ويدعم دعوة endpoints بسيطة:
+        //    POST /api/info  { url }  => للحصول على معلومات (title, thumbnail, formats[])
+        //    GET  /api/download?url=...&format_id=...  => يبدأ تنزيل الملف عبر الخادم
+        // - في النهاية أرفقت مثال سيرفر Node.js (yt-dlp) في المرفقات. لتشغيل الوظيفة الكاملة، شغّل السيرفر محلياً أو على VPS ثم غيّر مسارات API إذا لزم.
+        // ================================================
+
+        const $ = id => document.getElementById(id);
+        const urlInput = $('urlInput');
+        const analyzeBtn = $('analyzeBtn');
+        const pasteBtn = $('pasteBtn');
+        const clearBtn = $('clearBtn');
+        const loadingSection = $('loadingSection');
+        const loadingText = $('loadingText');
+        const errorSection = $('errorSection');
+        const thumbnailsGrid = $('thumbnailsGrid');
+        const mediaTitle = $('mediaTitle');
+        const mediaMeta = $('mediaMeta');
+        const previewPlaceholder = $('previewPlaceholder');
+        const formatsList = $('formatsList');
+        const formatsEl = $('formats');
+        const downloadSelectedBtn = $('downloadSelectedBtn');
+        const copyAllBtn = $('copyAllBtn');
+        const downloadAllBtn = $('downloadAllBtn');
+        const serviceTabs = document.querySelectorAll('.tab');
+        const serviceSelect = $('serviceSelect');
+        const toastContainer = $('toastContainer');
+        const downloadCountEl = $('downloadCount');
+        const mediaModal = $('mediaModal');
+        const modalBody = $('modalBody');
+
+        let currentInfo = null;
+        let selectedFormat = null;
+        let currentService = 'youtube';
+        let downloadCount = parseInt(localStorage.getItem('downloadCount') || '0');
+
+        // UI helpers
+        function showToast(msg, time = 3000) {
+            const t = document.createElement('div');
+            t.className = 'toast'; t.textContent = msg;
+            toastContainer.appendChild(t);
+            setTimeout(()=>{ t.remove(); }, time);
+        }
+        function setLoading(show, text = 'جاري التحليل...') {
+            loadingSection.style.display = show ? 'block' : 'none';
+            loadingText.textContent = text;
+        }
+        function setError(msg) {
+            if (!msg) { errorSection.style.display='none'; errorSection.textContent=''; return; }
+            errorSection.style.display='block'; errorSection.textContent = msg;
+        }
+        function updateDownloadCountUI() {
+            downloadCountEl.textContent = downloadCount;
+            localStorage.setItem('downloadCount', downloadCount);
+        }
+
+        // خدمة مُختارة عن طريق النقر على التبويبات
+        serviceTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                serviceTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                currentService = tab.dataset.service;
+                serviceSelect.value = tab.dataset.service;
+            });
+        });
+        serviceSelect.addEventListener('change', () => {
+            const v = serviceSelect.value;
+            if (v !== 'auto') {
+                currentService = v;
+                serviceTabs.forEach(t => t.classList.toggle('active', t.dataset.service === v));
+            }
+        });
+
+        // استخراج نوع الخدمة تلقائياً إذا تم اختيار auto
+        function detectServiceFromUrl(url) {
+            if (/youtube\.com|youtu\.be/.test(url)) return 'youtube';
+            if (/tiktok\.com|vt\.tiktok/.test(url)) return 'tiktok';
+            if (/instagram\.com|instagr\.am/.test(url)) return 'instagram';
+            return 'unknown';
+        }
+
+        // تحليل الرابط: يرسل طلب للخادم للحصول على الصيغ والمعلومات
+        async function analyzeUrl() {
+            const url = urlInput.value.trim();
+            if (!url) { setError('الرجاء إدخال رابط'); urlInput.focus(); return; }
+            setError(null);
+            setLoading(true, 'جاري الاتصال بالسيرفر...');
+            formatsEl.innerHTML = ''; thumbnailsGrid.innerHTML = ''; formatsList.style.display='none';
+            currentInfo = null;
+            selectedFormat = null;
+
+            // نحدد الخدمة إن كان الوضع تلقائي
+            let svc = serviceSelect.value === 'auto' ? detectServiceFromUrl(url) : serviceSelect.value;
+            if (svc === 'unknown' || svc === 'auto') svc = 'auto';
+
+            try {
+                // نطلب من السيرفر معلومات JSON (الخادم يجب أن يوفر /api/info)
+                const res = await fetch('/api/info', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({url, service: svc})
+                });
+                if (!res.ok) {
+                    const txt = await res.text();
+                    throw new Error(txt || 'فشل في التواصل مع السيرفر');
+                }
+                const info = await res.json();
+                currentInfo = info;
+                renderInfo(info);
+                setLoading(false);
+                showToast('تم تحليل الرابط');
+            } catch (err) {
+                setLoading(false);
+                console.error(err);
+                setError('فشل الحصول على المعلومات: ' + (err.message || err));
+            }
+        }
+
+        // عرض المعلومات والصيغ
+        function renderInfo(info) {
+            // preview
+            mediaTitle.textContent = info.title || (info.id || 'ميديا');
+            mediaMeta.textContent = `${info.uploader || ''} · ${info.duration || ''}`;
+            previewPlaceholder.querySelector('div')?.remove?.(); // clear placeholder visuals if needed
+
+            // show thumbnail preview
+            thumbnailsGrid.innerHTML = '';
+            if (info.thumbnails && info.thumbnails.length) {
+                const thumb = info.thumbnails[info.thumbnails.length -1].url || info.thumbnails[0].url;
+                const card = document.createElement('div');
+                card.className = 'thumbnail-card';
+                card.innerHTML = `<img src="${thumb}" alt="thumb" loading="lazy" onclick="openModal('${thumb}')">`;
+                thumbnailsGrid.appendChild(card);
+            }
+
+            // formats
+            formatsEl.innerHTML = '';
+            if (Array.isArray(info.formats) && info.formats.length) {
+                formatsList.style.display='block';
+                // reorder: prefer mp4 webm m4a etc
+                const formats = info.formats.slice().filter(f => f.filesize || f.format || f.ext).slice(0, 60);
+                formats.forEach(f => {
+                    const row = document.createElement('div');
+                    row.className = 'format';
+                    const left = document.createElement('div'); left.className = 'left';
+                    left.innerHTML = `<div style="width:46px;height:34px;border-radius:6px;background:rgba(255,255,255,0.03);display:flex;align-items:center;justify-content:center">${f.ext || ''}</div>
+                                      <div style="text-align:right">
+                                        <div style="font-weight:800">${f.format || f.format_note || f.format_id}</div>
+                                        <div class="muted" style="font-size:12px">${f.filesize ? humanFileSize(f.filesize) : (f.tbr ? f.tbr + ' kbps' : '')}</div>
+                                      </div>`;
+                    const right = document.createElement('div');
+                    right.innerHTML = `<div style="display:flex;gap:8px;align-items:center">
+                                            <button class="btn btn-ghost" onclick="copyLink('${encodeURIComponent(f.url || f.download_url || '')}')"><i class="fas fa-link"></i></button>
+                                            <button class="btn btn-primary" onclick="startDownload('${encodeURIComponent(currentInfo.request_url)}','${encodeURIComponent(f.format_id || f.format)}')"><i class="fas fa-download"></i> تنزيل</button>
+                                       </div>`;
+                    row.appendChild(left);
+                    row.appendChild(right);
+                    formatsEl.appendChild(row);
+
+                    // allow click to select
+                    row.addEventListener('click', (e) => {
+                        // ignore clicks on buttons
+                        if (e.target.closest('button')) return;
+                        // toggle selection
+                        formatsEl.querySelectorAll('.format').forEach(el => el.style.boxShadow='');
+                        row.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)';
+                        selectedFormat = f;
+                    });
+                });
+            } else {
+                formatsList.style.display='none';
+                const infoDiv = $('extraInfo');
+                infoDiv.innerHTML = `<div class="muted">لا توجد صيغ قابلة للعرض. يمكنك تنزيل الصورة المصغرة أو استخدام السيرفر لتحويل.</div>`;
+            }
+
+            // detailed formats area (for larger list)
+            $('detailedFormats').innerHTML = ''; // optional
+            // Save request_url for download usage
+            currentInfo.request_url = currentInfo.url || currentInfo.webpage_url || currentInfo.request_url || urlInput.value.trim();
+        }
+
+        // تنزيل عبر الخادم (يفتح رابط /api/download)
+        function startDownload(requestUrlEncoded, formatIdEncoded) {
+            const url = decodeURIComponent(requestUrlEncoded || encodeURIComponent(urlInput.value.trim()));
+            const format = decodeURIComponent(formatIdEncoded || (selectedFormat && (selectedFormat.format_id || selectedFormat.format)));
+            if (!url) { showToast('لا يوجد عنوان لتنزيل'); return; }
+            // افتح الرابط الذي يقوم الخادم بتشغيل yt-dlp وتحويله
+            const dlUrl = `/api/download?url=${encodeURIComponent(url)}${format ? '&format_id=' + encodeURIComponent(format) : ''}`;
+            // فتح في نافذة جديدة يبدأ تنزيل الملف (الخادم يعيد Content-Disposition)
+            window.open(dlUrl, '_blank');
+            downloadCount++;
+            updateDownloadCountUI();
+        }
+
+        // نسخ رابط
+        async function copyLink(raw) {
+            const v = decodeURIComponent(raw || '');
+            try {
+                await navigator.clipboard.writeText(v);
+                showToast('تم نسخ الرابط');
+            } catch {
+                showToast('فشل النسخ', 2500);
+            }
+        }
+
+        async function copyAllLinks() {
+            if (!currentInfo || !currentInfo.formats) { showToast('لا توجد روابط'); return; }
+            const links = currentInfo.formats.map(f=> `${f.format} — ${f.ext} — ${f.format_id}\n${f.url || f.download_url || ''}`).join('\n\n');
+            try { await navigator.clipboard.writeText(links); showToast('تم نسخ جميع الروابط'); }
+            catch { showToast('فشل النسخ'); }
+        }
+
+        // تنزيل جميع الصور (thumbnails) - client side
+        function downloadAllThumbnails() {
+            if (!currentInfo || !currentInfo.thumbnails) { showToast('لا توجد صور للمشاركة'); return; }
+            currentInfo.thumbnails.slice(0,6).forEach((t, i) => {
+                const a = document.createElement('a');
+                a.href = t.url; a.target='_blank';
+                a.download = `thumbnail-${i}.jpg`;
+                a.click();
+            });
+            showToast('بدأ تنزيل الصور');
+        }
+
+        // helper filesize
+        function humanFileSize(bytes) {
+            if (!bytes) return '';
+            const thresh = 1024;
+            if (Math.abs(bytes) < thresh) return bytes + ' B';
+            const units = ['KB','MB','GB','TB','PB','EB','ZB','YB'];
+            let u = -1;
+            do { bytes /= thresh; ++u; } while(Math.abs(bytes) >= thresh && u < units.length - 1);
+            return bytes.toFixed(1)+' '+units[u];
+        }
+
+        // modal
+        function openModal(src) {
+            modalBody.innerHTML = `<img src="${src}" alt="preview">`;
+            mediaModal.classList.add('show');
+        }
+        function closeModal() { mediaModal.classList.remove('show'); modalBody.innerHTML=''; }
+
+        // events
+        analyzeBtn.addEventListener('click', analyzeUrl);
+        pasteBtn.addEventListener('click', async ()=> {
+            try {
+                const txt = await navigator.clipboard.readText();
+                urlInput.value = txt;
+                showToast('تم اللصق');
+            } catch {
+                showToast('لا يمكن الوصول للحافظة', 2000);
+            }
+        });
+        clearBtn.addEventListener('click', ()=> { urlInput.value=''; setError(null); thumbnailsGrid.innerHTML=''; formatsEl.innerHTML=''; formatsList.style.display='none'; mediaTitle.textContent='لا شيء حتى الآن'; mediaMeta.textContent=''; });
+
+        downloadSelectedBtn.addEventListener('click', ()=> {
+            if (!selectedFormat) { showToast('اختر صيغة أولاً'); return; }
+            startDownload(encodeURIComponent(currentInfo.request_url), encodeURIComponent(selectedFormat.format_id || selectedFormat.format));
+        });
+
+        copyAllBtn.addEventListener('click', copyAllLinks);
+        downloadAllBtn.addEventListener('click', downloadAllThumbnails);
+
+        // Enter key
+        urlInput.addEventListener('keypress', (e)=> { if (e.key === 'Enter') analyzeUrl(); });
+
+        // init
+        (function init(){
+            updateDownloadCountUI();
+            // keyboard: Ctrl+V to paste + auto analyze
+            document.addEventListener('paste', (e)=> {
+                // optional auto-paste behavior handled by paste button
+            });
+        })();
+    </script>
+</body>
+</html>
